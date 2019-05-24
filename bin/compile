@@ -10,12 +10,69 @@ ENV_DIR=${3:-}
 LANG=en-US
 PLATFORM=linux64
 
+
+#installing required packages
+
+
+if [ ! -f $CACHE_DIR/PURGED_CACHE_V1 ]; then
+  topic "Purging cache"
+  rm -rf $CACHE_DIR/apt
+  rm -rf $CACHE_DIR/archives
+  rm -rf $CACHE_DIR/lists
+  touch $CACHE_DIR/PURGED_CACHE_V1
+fi
+
+PACKAGES="
+      gconf-service
+      libappindicator1
+      libasound2
+      libatk1.0-0
+      libatk-bridge2.0-0
+      libcairo-gobject2
+      libgconf-2-4
+      libgtk-3-0
+      libnspr4
+      libnss3
+      libx11-xcb1
+      libxcomposite1
+      libxcursor1
+      libxdamage1
+      libxfixes3
+      libxi6
+      libxinerama1
+      libxrandr2
+      libxss1
+      libxtst6
+      fonts-liberation
+      libxt6
+    "
+
+APT_CACHE_DIR="$CACHE_DIR/apt/cache"
+APT_STATE_DIR="$CACHE_DIR/apt/state"
+
+mkdir -p "$APT_CACHE_DIR/archives/partial"
+mkdir -p "$APT_STATE_DIR/lists/partial"
+
+APT_OPTIONS="-o debug::nolocking=true -o dir::cache=$APT_CACHE_DIR -o dir::state=$APT_STATE_DIR"
+
+topic "Updating apt caches"
+apt-get $APT_OPTIONS update | indent
+
+for PACKAGE in $PACKAGES; do
+  topic "Fetching .debs for $PACKAGE"
+  apt-get $APT_OPTIONS -y --force-yes -d install --reinstall $PACKAGE | indent
+done
+
+
+## firefox
+
 if [ -f $ENV_DIR/FIREFOX_VERSION ]; then
   VERSION=$(cat $ENV_DIR/FIREFOX_VERSION)
   echo "-----> Firefox version defined as: v${VERSION}"
 else
   VERSION=latest
 fi
+
 
 # Buildpack URL
 ARCHIVE_NAME=firefox
